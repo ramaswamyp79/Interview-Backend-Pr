@@ -6,15 +6,15 @@ spec:
   replicas: 1
   selector:
     matchLabels:
-      app: backend-api
+      app: backend
   template:
     metadata:
       labels:
-        app: backend-api
+        app: backend
     spec:
       containers:
         - name: backend
-          image: gcr.io/interview-ai-482614/backend:PLACEHOLDER
+          image: gcr.io/gen-lang-client-0149291660/backend:latest
           imagePullPolicy: Always
           ports:
             - containerPort: 5000

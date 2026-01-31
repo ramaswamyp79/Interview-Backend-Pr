@@ -22,26 +22,27 @@ if (!process.env.JWT_SECRET) {
 
 const app = express();
 connectDB();
-const allowedOrigins = [
-  "http://localhost:5173",
-  "https://34.54.116.200.nip.io",
-];
+const CLIENT_ORIGIN_HC = "https://34.149.156.4.nip.io,http://localhost:5173";
+const CLIENT_ORIGIN_tmp =
+  process.env.CLIENT_ORIGINS || CLIENT_ORIGIN_HC;
 
-app.use(
-  cors({
-    origin: function (origin, callback) {
-      // allow REST tools, curl, server-to-server
-      if (!origin) return callback(null, true);
+const allowedOrigins = CLIENT_ORIGIN_tmp.split(",");
 
-      if (allowedOrigins.includes(origin)) {
-        return callback(null, true);
-      }
+const corsOptions = {
+  origin: function (origin, callback) {
+    console.log("ORIGIN" + origin);
+    if (!origin || allowedOrigins.includes(origin)) {
+      callback(null, true);
+    } else {
+      console.error("❌ CORS BLOCKED:", origin);
+      callback(new Error("Not allowed by CORS"));
+    }
+  },
+  credentials: true,
+};
 
-      return callback(new Error("Not allowed by CORS"));
-    },
-    credentials: true,
-  })
-);
+app.use(cors(corsOptions));
+
 
 app.use(express.json());
 app.use(cookieParser());

@@ -5,15 +5,13 @@ metadata:
   annotations:
     kubernetes.io/ingress.class: "gce"
     networking.gke.io/managed-certificates: frontend-cert
-    # Serve index.html for all paths
-    nginx.ingress.kubernetes.io/rewrite-target: /
 spec:
   rules:
-    - host: 34.54.116.200.nip.io
+    - host: 34.149.156.4.nip.io
       http:
         paths:
-          - path: /*
-            pathType: ImplementationSpecific
+          - path: /
+            pathType: Prefix
             backend:
               service:
                 name: user-frontend-service
