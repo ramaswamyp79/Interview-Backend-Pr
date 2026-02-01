@@ -16,10 +16,16 @@ export const createCheckout = async (req, res) => {
       return res.status(400).json({ message: "Plan is required" });
     }
 
+    // Prefer client Origin header (from browser) so frontend running locally can receive Stripe redirects
+    const ref = req.get("referer");
+    const originHeader = req.get("origin") || (ref && ref.split("/").slice(0, 3).join("/"));
+    const clientOrigin = originHeader || process.env.CLIENT_ORIGIN;
+
     // ✅ This must return session.url
     const checkoutUrl = await paymentService.createCheckoutSession({
       user: req.user,
       plan,
+      clientOrigin,
     });
 
     return res.json({ url: checkoutUrl });

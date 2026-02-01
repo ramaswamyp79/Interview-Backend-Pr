@@ -11,10 +11,21 @@ function getStripe() {
   return _stripe;
 }
 
-const createCheckoutSession = async ({ user, plan }) => {
+const createCheckoutSession = async ({ user, plan, clientOrigin: suppliedOrigin }) => {
   const stripe = getStripe();
 
-  const clientOrigin = process.env.CLIENT_ORIGIN;
+  // Allowed origins (CSV) - used to validate any origin supplied by the client
+  const allowedOrigins = (process.env.CLIENT_ORIGINS || "").split(",").map((s) => s.trim()).filter(Boolean);
+  const envDefaultOrigin = process.env.CLIENT_ORIGIN;
+
+  // Prefer supplied origin only if it's in the allowed list
+  let clientOrigin = suppliedOrigin || envDefaultOrigin;
+  if (suppliedOrigin) {
+    if (!allowedOrigins.includes(suppliedOrigin)) {
+      console.warn("⚠️ Supplied origin not in CLIENT_ORIGINS, falling back to env CLIENT_ORIGIN:", suppliedOrigin);
+      clientOrigin = envDefaultOrigin;
+    }
+  }
 
   if (!clientOrigin) {
     console.error("❌ CLIENT_ORIGIN is missing");
@@ -25,6 +36,8 @@ const createCheckoutSession = async ({ user, plan }) => {
     console.error("❌ Invalid CLIENT_ORIGIN:", clientOrigin);
     throw new Error("CLIENT_ORIGIN must include http/https");
   }
+
+  console.log("🔧 Using clientOrigin for Stripe redirects:", clientOrigin);
 
   const successUrl = `${clientOrigin}/payment-success?session_id={CHECKOUT_SESSION_ID}`;
   const cancelUrl = `${clientOrigin}/payment-cancel`;
