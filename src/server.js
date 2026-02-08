@@ -22,7 +22,7 @@ if (!process.env.JWT_SECRET) {
 
 const app = express();
 connectDB();
-const CLIENT_ORIGIN_HC = "https://34.149.156.4.nip.io,http://localhost:5173";
+const CLIENT_ORIGIN_HC = "https://www.answerflow-ai.com,http://localhost:5173";
 const CLIENT_ORIGIN_tmp =
   process.env.CLIENT_ORIGINS || CLIENT_ORIGIN_HC;
 
