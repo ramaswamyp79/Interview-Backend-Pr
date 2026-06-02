@@ -26,10 +26,6 @@ const createCheckoutSession = async ({ user, plan }) => {
   const successUrl = `${clientOrigin}/payment-success?session_id={CHECKOUT_SESSION_ID}`;
   const cancelUrl = `${clientOrigin}/payment-cancel`;
 
-  console.log("Stripe checkout CLIENT_ORIGIN:", clientOrigin);
-  console.log("Stripe checkout success_url:", successUrl);
-  console.log("Stripe checkout cancel_url:", cancelUrl);
-
   // Stripe checkout session
   const session = await stripe.checkout.sessions.create({
     mode: "payment",
