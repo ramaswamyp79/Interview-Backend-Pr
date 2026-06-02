@@ -1,2 +1,11 @@
 node_modules
+npm-debug.log
 .git
+.github
+Kubernet
+.env
+.env.*
+key.json
+src/config/gcs-key.json
+scripts/gcs-key.json
+.DS_Store

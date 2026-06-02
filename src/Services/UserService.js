@@ -1,14 +1,29 @@
-import User from "../Model/User.js";
+import admin from "firebase-admin";
+import db from "../config/db.js"; 
+
+/**
+ * Helper function to map the Firestore doc and remove sensitive fields
+ */
+const mapSafeUser = (doc) => {
+  const data = doc.data();
+  delete data.password; 
+  delete data.resetOtp;
+  delete data.resetOtpExpiry;
+  return { _id: doc.id, ...data };
+};
 
 /**
  * Get user profile by ID
+ * 🔥 Added `preFetchedDoc` parameter to prevent double-querying
  */
-export const getUserById = async (userId) => {
-  const user = await User.findById(userId).select("-password");
-  if (!user) {
+export const getUserById = async (userId, preFetchedDoc = null) => {
+  const userDoc = preFetchedDoc || await db.collection("users").doc(userId).get();
+
+  if (!userDoc.exists) {
     throw new Error("User not found");
   }
-  return user;
+
+  return mapSafeUser(userDoc);
 };
 
 /**
@@ -29,15 +44,47 @@ export const updateUserById = async (userId, updateData) => {
     }
   });
 
-  const updatedUser = await User.findByIdAndUpdate(
-    userId,
-    { $set: filteredData },
-    { new: true, runValidators: true }
-  ).select("-password");
+  // If there are no valid updates, just return the current user
+  if (Object.keys(filteredData).length === 0) {
+    return await getUserById(userId);
+  }
 
-  if (!updatedUser) {
+  // Always update the timestamp
+  filteredData.updatedAt = admin.firestore.FieldValue.serverTimestamp();
+
+  const userRef = db.collection("users").doc(userId);
+
+  try {
+    // Perform the update
+    await userRef.update(filteredData);
+  } catch (error) {
+    // Firestore throws a specific error if you try to update a document that doesn't exist
+    if (error.code === 5) { // 5 is the gRPC NOT_FOUND code
+      throw new Error("User not found");
+    }
+    throw error;
+  }
+
+  // Fetch and return the newly updated document
+  const updatedDoc = await userRef.get();
+  return mapSafeUser(updatedDoc);
+};
+
+/**
+ * Get user credits
+ * 🔥 Added `preFetchedDoc` parameter to prevent double-querying
+ */
+export const getUserCredits = async (userId, preFetchedDoc = null) => {
+  const userDoc = preFetchedDoc || await db.collection("users").doc(userId).get();
+
+  if (!userDoc.exists) {
     throw new Error("User not found");
   }
 
-  return updatedUser;
+  const userData = userDoc.data();
+
+  return {
+    // Fallback to 0 just in case the field is missing
+    credits: userData.credits || 0,
+  };
 };

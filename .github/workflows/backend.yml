@@ -1,78 +1,49 @@
-name: Backend CI/CD
+name: Backend Cloud Run CI/CD
 
 on:
   push:
     branches:
       - main
 
+env:
+  PROJECT_ID: ${{ secrets.GCP_PROJECT_ID }}
+  REGION: ${{ secrets.CLOUD_RUN_REGION }}
+  SERVICE: interview-backend
+  REPOSITORY: cloud-run-source-deploy
+
 jobs:
   build-and-deploy:
     runs-on: ubuntu-latest
 
     steps:
-      # 1️⃣ Checkout code
       - name: Checkout code
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
 
-      # 2️⃣ Authenticate to GCP
       - name: Authenticate to GCP
-        uses: google-github-actions/auth@v1
+        uses: google-github-actions/auth@v2
         with:
           credentials_json: ${{ secrets.GCP_SA_KEY }}
 
-      # 3️⃣ Setup gcloud
       - name: Set up gcloud
-        uses: google-github-actions/setup-gcloud@v1
+        uses: google-github-actions/setup-gcloud@v2
         with:
-          project_id: ${{ secrets.GKE_PROJECT }}
+          project_id: ${{ env.PROJECT_ID }}
 
-      # 4️⃣ Install GKE auth plugin
-      - name: Install GKE auth plugin
-        run: |
-          gcloud components install gke-gcloud-auth-plugin --quiet
-          echo "USE_GKE_GCLOUD_AUTH_PLUGIN=True" >> $GITHUB_ENV
-
-      # 5️⃣ Configure Docker for GCR
       - name: Configure Docker
-        run: gcloud auth configure-docker gcr.io --quiet
+        run: gcloud auth configure-docker ${{ env.REGION }}-docker.pkg.dev --quiet
 
-      # 6️⃣ Build Docker image (UNIQUE TAG = commit SHA)
-      - name: Build Docker image
+      - name: Build image
+        run: docker build -t ${{ env.REGION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/${{ env.REPOSITORY }}/${{ env.SERVICE }}:${{ github.sha }} .
+
+      - name: Push image
+        run: docker push ${{ env.REGION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/${{ env.REPOSITORY }}/${{ env.SERVICE }}:${{ github.sha }}
+
+      - name: Deploy to Cloud Run
         run: |
-          docker build -t gcr.io/${{ secrets.GKE_PROJECT }}/backend:${{ github.sha }} .
-
-      # 7️⃣ Push Docker image
-      - name: Push Docker image
-        run: |
-          docker push gcr.io/${{ secrets.GKE_PROJECT }}/backend:${{ github.sha }}
-
-      # 8️⃣ Connect to GKE
-      - name: Get GKE credentials
-        run: |
-          gcloud container clusters get-credentials ${{ secrets.GKE_CLUSTER }} \
-            --zone ${{ secrets.GKE_ZONE }} \
-            --project ${{ secrets.GKE_PROJECT }}
-
-      # 9️⃣ Create / Update backend secrets
-      - name: Create backend secrets
-        run: |
-          kubectl create secret generic backend-secrets \
-            --from-literal=PORT=5000 \
-            --from-literal=MONGO_URI="${{ secrets.MONGO_URI }}" \
-            --from-literal=STRIPE_SECRET_KEY="${{ secrets.STRIPE_SECRET_KEY }}" \
-            --from-literal=STRIPE_WEBHOOK_SECRET="${{ secrets.STRIPE_WEBHOOK_SECRET }}" \
-            --from-literal=JWT_SECRET="${{ secrets.JWT_SECRET }}" \
-            --from-literal=JWT_EXPIRES_IN=7d \
-            --from-literal=CLIENT_ORIGIN="${{ secrets.CLIENT_ORIGIN }}" \
-            --dry-run=client -o yaml | kubectl apply -f -
-
-      # 🔟 Deploy backend (FORCE rollout)
-      - name: Deploy Backend
-        run: |
-          kubectl apply -f Kubernet/backend-deployment.yaml
-          kubectl apply -f Kubernet/backend-service.yaml
-
-          kubectl set image deployment/backend \
-            backend=gcr.io/${{ secrets.GKE_PROJECT }}/backend:${{ github.sha }}
-
-          kubectl rollout status deployment/backend
+          gcloud run deploy ${{ env.SERVICE }} \
+            --image ${{ env.REGION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/${{ env.REPOSITORY }}/${{ env.SERVICE }}:${{ github.sha }} \
+            --region ${{ env.REGION }} \
+            --platform managed \
+            --allow-unauthenticated \
+            --set-env-vars NODE_ENV=production,JWT_EXPIRES_IN=7d \
+            --set-secrets MONGO_URI=MONGO_URI:latest,JWT_SECRET=JWT_SECRET:latest,STRIPE_SECRET_KEY=STRIPE_SECRET_KEY:latest,STRIPE_WEBHOOK_SECRET=STRIPE_WEBHOOK_SECRET:latest,CLIENT_ORIGIN=CLIENT_ORIGIN:latest,GCS_BUCKET=GCS_BUCKET:latest,GCS_KEY=GCS_KEY:latest,GEMINI_API_KEY=GEMINI_API_KEY:latest,CLOUDCONVERT_API_KEY=CLOUDCONVERT_API_KEY:latest,EMAIL_USER=EMAIL_USER:latest,EMAIL_PASS=EMAIL_PASS:latest,BACKEND_URL=BACKEND_URL:latest

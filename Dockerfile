@@ -1,23 +1,16 @@
-# 1️⃣ Use Node.js base image
 FROM node:20-alpine
 
-# 2️⃣ Set working directory
+ENV NODE_ENV=production
+
 WORKDIR /app
 
-# 3️⃣ Copy package files first (better caching)
-COPY package*.json ./
+COPY package.json ./
+RUN npm install --omit=dev --no-audit --no-fund
 
-# 4️⃣ Install dependencies
-RUN npm install
+COPY src ./src
 
-# 5️⃣ Copy all backend code
-COPY . .
+USER node
 
-# 6️⃣ Copy .env file explicitly
-#COPY .env /app/.env
-
-# 7️⃣ Expose backend port
 EXPOSE 5000
 
-# 8️⃣ Start server
 CMD ["npm", "start"]

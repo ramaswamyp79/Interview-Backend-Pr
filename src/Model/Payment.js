@@ -1,23 +1,25 @@
-import mongoose from "mongoose";
+import admin from "firebase-admin";
 
-const paymentSchema = new mongoose.Schema(
-  {
-    userId: {
-      type: mongoose.Schema.Types.ObjectId,
-      ref: "User",
-      required: true,
-    },
-    stripeSessionId: String,
-    amount: Number,
-    currency: String,
-    credits: Number,
-    status: {
-      type: String,
-      enum: ["pending", "paid", "failed"],
-      default: "pending",
-    },
-  },
-  { timestamps: true }
-);
+/**
+ * Formats payment data before saving to Firestore.
+ */
+export const formatPaymentData = (data) => {
+  return {
+    userId: data.userId || "",
+    stripeSessionId: data.stripeSessionId || "",
+    amount: data.amount || 0,
+    currency: data.currency || "INR",
+    credits: data.credits || 0,
+    status: data.status || "pending",
+    createdAt: data.createdAt || admin.firestore.FieldValue.serverTimestamp(),
+    updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+  };
+};
 
-export default mongoose.model("Payment", paymentSchema);
+/**
+ * Maps a Firestore document to a standard JS object, restoring the _id property.
+ */
+export const mapPaymentDoc = (doc) => {
+  if (!doc.exists) return null;
+  return { _id: doc.id, ...doc.data() };
+};
