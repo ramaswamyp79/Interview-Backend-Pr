@@ -1,3 +1,6 @@
 node_modules
 npm-debug.log
 .DS_Store
+key.json
+src/config/gcs-key.json
+scripts/gcs-key.json

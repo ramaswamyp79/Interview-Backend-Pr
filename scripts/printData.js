@@ -1,19 +1,8 @@
 import dotenv from "dotenv";
 dotenv.config();
 
-import admin from "firebase-admin";
 import fs from "fs";
-
-// 1. Initialize Firebase
-const serviceAccount = JSON.parse(
-  fs.readFileSync(new URL("../src/config/gcs-key.json", import.meta.url))
-);
-
-admin.initializeApp({
-  credential: admin.credential.cert(serviceAccount),
-});
-
-const db = admin.firestore();
+import db from "../src/config/db.js";
 
 // 👇 Changed the file name so it doesn't overwrite your previous data
 const logStream = fs.createWriteStream("payments_results.txt", { flags: "w" });

@@ -1,18 +1,6 @@
 import admin from "firebase-admin";
 import { getFirestore } from "firebase-admin/firestore";
-import fs from "fs";
-
-// 1. Load your Service Account Key
-const serviceAccount = JSON.parse(
-  fs.readFileSync(new URL("./gcs-key.json", import.meta.url))
-);
-
-// 2. Initialize Firebase Admin
-if (!admin.apps.length) {
-  admin.initializeApp({
-    credential: admin.credential.cert(serviceAccount),
-  });
-}
+import "../src/config/db.js";
 
 // 3. Connect to BOTH databases
 // The default database

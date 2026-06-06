@@ -1,6 +1,13 @@
 import { signJwt as generateToken, getJwtExpiryMs } from "../utils/jwt.utils.js";
 import authService from "../Services/AuthService.js";
 
+const maskEmail = (email) => {
+  if (!email || typeof email !== "string") return email;
+  const [name, domain] = email.split("@");
+  if (!domain) return email;
+  return `${name.slice(0, 2)}***@${domain}`;
+};
+
 // ================= SIGNUP =================
 export const signup = async (req, res) => {
   try {
@@ -59,6 +66,12 @@ export const login = async (req, res) => {
 // ================= SOCIAL =================
 export const socialAuth = async (req, res) => {
   try {
+    console.log("[auth-trace] social auth request", {
+      email: maskEmail(req.body?.email),
+      provider: req.body?.provider,
+      hasProviderId: Boolean(req.body?.providerId),
+    });
+
     const user = await authService.socialLogin(req.body);
 
     const token = generateToken({
@@ -74,8 +87,20 @@ export const socialAuth = async (req, res) => {
       maxAge: getJwtExpiryMs(),
     });
 
+    console.log("[auth-trace] social auth success", {
+      userId: user._id,
+      email: maskEmail(user.email),
+      role: user.role,
+      authProvider: user.authProvider,
+    });
+
     res.json({ token, user });
   } catch (err) {
+    console.error("[auth-trace] social auth failed", {
+      code: err.code,
+      details: err.details,
+      message: err.message,
+    });
     res.status(400).json({ message: err.message });
   }
 };

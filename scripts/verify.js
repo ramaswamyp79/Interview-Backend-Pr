@@ -1,19 +1,7 @@
 import dotenv from "dotenv";
 dotenv.config();
 
-import admin from "firebase-admin";
-import fs from "fs";
-
-// 1. Initialize Firebase
-const serviceAccount = JSON.parse(
-  fs.readFileSync(new URL("../src/config/gcs-key.json", import.meta.url))
-);
-
-admin.initializeApp({
-  credential: admin.credential.cert(serviceAccount),
-});
-
-const db = admin.firestore();
+import db from "../src/config/db.js";
 
 // 2. Verification Function
 const checkCollection = async (collectionName, expectedCount) => {

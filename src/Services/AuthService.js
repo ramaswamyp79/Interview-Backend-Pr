@@ -5,11 +5,43 @@ import db from "../config/db.js"; // Adjust path to your new Firebase db file
 import { formatUserData, mapUserDoc } from "../Model/User.js";
 import { sendOtpEmail } from "../utils/sendEmail.js";
 
+const maskEmail = (email) => {
+  if (!email || typeof email !== "string") return email;
+  const [name, domain] = email.split("@");
+  if (!domain) return email;
+  return `${name.slice(0, 2)}***@${domain}`;
+};
+
+const logFirestoreError = (operation, error) => {
+  console.error("[auth-trace] firestore failure", {
+    operation,
+    code: error.code,
+    details: error.details,
+    message: error.message,
+  });
+};
+
 // Helper function to find a user by email in Firestore
 const getUserByEmail = async (email) => {
-  const snapshot = await db.collection("users").where("email", "==", email.toLowerCase().trim()).limit(1).get();
-  if (snapshot.empty) return null;
-  return mapUserDoc(snapshot.docs[0]);
+  const normalizedEmail = email.toLowerCase().trim();
+
+  console.log("[auth-trace] firestore user lookup", {
+    email: maskEmail(normalizedEmail),
+  });
+
+  try {
+    const snapshot = await db.collection("users").where("email", "==", normalizedEmail).limit(1).get();
+    console.log("[auth-trace] firestore user lookup result", {
+      email: maskEmail(normalizedEmail),
+      found: !snapshot.empty,
+      count: snapshot.size,
+    });
+    if (snapshot.empty) return null;
+    return mapUserDoc(snapshot.docs[0]);
+  } catch (error) {
+    logFirestoreError("users.where(email).get", error);
+    throw error;
+  }
 };
 
 const registerUser = async (data) => {
@@ -76,11 +108,20 @@ const socialLogin = async ({ email, name, provider, providerId }) => {
   }
 
   const authProvider = normalizeProvider(provider);
+  console.log("[auth-trace] social login service", {
+    email: maskEmail(email),
+    provider,
+    normalizedProvider: authProvider,
+    hasProviderId: Boolean(providerId),
+  });
   let user = await getUserByEmail(email);
 
   // 🔹 First-time social login
   if (!user) {
-    console.log("Creating user with provider:", authProvider);
+    console.log("[auth-trace] creating social user", {
+      email: maskEmail(email),
+      provider: authProvider,
+    });
     const userRef = db.collection("users").doc();
     
     const userData = formatUserData({
@@ -91,17 +132,33 @@ const socialLogin = async ({ email, name, provider, providerId }) => {
       authProviderId: providerId,
     });
 
-    await userRef.set(userData);
+    try {
+      await userRef.set(userData);
+    } catch (error) {
+      logFirestoreError("users.doc().set", error);
+      throw error;
+    }
+
+    console.log("[auth-trace] created social user", {
+      userId: userRef.id,
+      email: maskEmail(email),
+      provider: authProvider,
+    });
     return { _id: userRef.id, ...userData };
   }
 
   // 🔹 Existing user but provider not set (edge case)
   if (!user.authProvider || user.authProvider === "local") {
-    await db.collection("users").doc(user._id).update({
-      authProvider,
-      authProviderId: providerId,
-      updatedAt: admin.firestore.FieldValue.serverTimestamp()
-    });
+    try {
+      await db.collection("users").doc(user._id).update({
+        authProvider,
+        authProviderId: providerId,
+        updatedAt: admin.firestore.FieldValue.serverTimestamp()
+      });
+    } catch (error) {
+      logFirestoreError("users.doc(userId).update(provider)", error);
+      throw error;
+    }
     
     user.authProvider = authProvider;
     user.authProviderId = providerId;
