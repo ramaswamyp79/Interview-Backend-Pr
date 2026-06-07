@@ -2,6 +2,7 @@ import sessionService from "../Services/sessionService.js";
 import db from "../config/db.js";
 import crypto from "crypto";
 import { getSessionListVersion } from "../utils/sessionListVersion.js";
+import { getRequestBaseUrl } from "../utils/requestBaseUrl.js";
 
 /* ================= CREATE ================= */
 
@@ -79,7 +80,8 @@ export const listMySessions = async (req, res) => {
     const result = await sessionService.listSessionsForUser(
       userId,
       page,
-      limit
+      limit,
+      getRequestBaseUrl(req)
     );
 
     res.set("ETag", etag);

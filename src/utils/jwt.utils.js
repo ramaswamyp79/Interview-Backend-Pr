@@ -1,7 +1,7 @@
 // utils/jwt.utils.js
 import jwt from "jsonwebtoken";
 
-const JWT_SECRET = process.env.JWT_SECRET || "68a4649c60510586127939f2b59a60b0d0e19ed81045bda7da5735039935b7bd63f749b2b140de5f8a0183f2e7b259d20a10dee56e1f5375ddfb5d8175b22d1e";
+const JWT_SECRET = process.env.JWT_SECRET;
 const JWT_EXPIRES_IN = process.env.JWT_EXPIRES_IN || "7d";
 
 if (!JWT_SECRET) {

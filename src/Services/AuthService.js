@@ -3,7 +3,7 @@ import crypto from "crypto";
 import admin from "firebase-admin";
 import db from "../config/db.js"; // Adjust path to your new Firebase db file
 import { formatUserData, mapUserDoc } from "../Model/User.js";
-import { sendOtpEmail } from "../utils/sendEmail.js";
+import { sendOtpEmail } from "../utils/mail.js";
 
 const maskEmail = (email) => {
   if (!email || typeof email !== "string") return email;

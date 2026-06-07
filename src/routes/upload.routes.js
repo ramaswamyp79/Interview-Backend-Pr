@@ -18,9 +18,9 @@ import auth from "../middleware/auth.middleware.js";
 import libre from "libreoffice-convert";
 import util from "util";
 import { convertToPdf } from "../utils/convertToPdf.js";
+import { getRequestBaseUrl } from "../utils/requestBaseUrl.js";
 
 const libreConvert = util.promisify(libre.convert);
-const BASE_URL = process.env.BACKEND_URL;
 
 const router = express.Router();
 const upload = multer({
@@ -48,6 +48,7 @@ router.post("/upload-resume", auth, upload.single("resume"), async (req, res) =>
     const { title } = req.body;
     const userId = req.user._id || req.user.id;
     const email = req.user.email;
+    const baseUrl = getRequestBaseUrl(req);
 
     if (!file)
       return res.status(400).json({ success: false, message: "Resume file is required" });
@@ -280,8 +281,8 @@ router.post("/upload-resume", auth, upload.single("resume"), async (req, res) =>
         originalTitle: resumeDoc.title,
         version: resumeDoc.version,
         isDefault: resumeDoc.isDefault,
-        previewUrl: `${BASE_URL}/api/resume/view/${resumeDoc._id}`,
-        downloadUrl: `${BASE_URL}/api/resume/download/${resumeDoc._id}`,
+        previewUrl: `${baseUrl}/api/resume/view/${resumeDoc._id}`,
+        downloadUrl: `${baseUrl}/api/resume/download/${resumeDoc._id}`,
       },
     });
   } catch (error) {

@@ -1,4 +1,5 @@
 import "dotenv/config";
+import "./config/env.js";
 
 import express from "express";
 import cookieParser from "cookie-parser";
@@ -18,6 +19,8 @@ import uploadRoutes from "./routes/upload.routes.js";
 import * as paymentController from "./controllers/payment.controller.js";
 
 const app = express();
+
+app.set("trust proxy", 1);
 
 /* ================= SECURITY ================= */
 

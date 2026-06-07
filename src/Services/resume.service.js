@@ -3,8 +3,6 @@ import db from "../config/db.js";
 import { formatResumeData, mapResumeDoc } from "../Model/Resume.js";
 import { bucket } from "../utils/gcs.js";
 
-const BASE_URL = process.env.BACKEND_URL;
-
 // ================= CREATE RESUME =================
 export const createResume = async (data) => {
   // Determine version for the same user & same title
@@ -32,8 +30,9 @@ export const createResume = async (data) => {
   return { _id: resumeRef.id, ...resumeData };
 };
 
-export const getResumes = async (userId, page = 1, limit = 6) => {
+export const getResumes = async (userId, page = 1, limit = 6, baseUrl) => {
   if (!userId) throw new Error("User ID missing");
+  if (!baseUrl) throw new Error("Base URL missing");
 
   const skip = (page - 1) * limit;
 
@@ -59,8 +58,8 @@ export const getResumes = async (userId, page = 1, limit = 6) => {
   const formatted = resumes.map((r) => ({
     ...r,
     title: `${r.title} (v${r.version})`,
-    previewUrl: `${BASE_URL}/api/resume/view/${r._id}`,
-    downloadUrl: `${BASE_URL}/api/resume/download/${r._id}`,
+    previewUrl: `${baseUrl}/api/resume/view/${r._id}`,
+    downloadUrl: `${baseUrl}/api/resume/download/${r._id}`,
   }));
 
   return {

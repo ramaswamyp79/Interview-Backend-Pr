@@ -2,6 +2,7 @@ import * as resumeService from "../Services/resume.service.js";
 import { bucket } from "../utils/gcs.js";
 import path from "path";
 import db from "../config/db.js";
+import { getRequestBaseUrl } from "../utils/requestBaseUrl.js";
 
 /* ================= CREATE ================= */
 
@@ -53,7 +54,12 @@ export const getResumes = async (req, res) => {
     }
 
     // 3. Only fetch full data if ETag doesn't match
-    const result = await resumeService.getResumes(userId, page, limit);
+    const result = await resumeService.getResumes(
+      userId,
+      page,
+      limit,
+      getRequestBaseUrl(req)
+    );
 
     // Set headers for next time
     res.set("ETag", etag);

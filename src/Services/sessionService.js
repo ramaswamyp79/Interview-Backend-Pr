@@ -4,8 +4,6 @@ import { touchSessionListVersion } from "../utils/sessionListVersion.js";
 import { formatSessionData, mapSessionDoc } from "../Model/Session.js";
 import { mapUserDoc } from "../Model/User.js";
 
-const BASE_URL = process.env.BACKEND_URL;
-
 /* ================= CREATE ================= */
 const createSession = async ({ userId, payload }) => {
   const sessionRef = db.collection("sessions").doc();
@@ -53,7 +51,9 @@ const getSessionById = async (sessionId) => {
 };
 
 /* ================= LIST ULTRA OPTIMIZED ================= */
-const listSessionsForUser = async (userId, page = 1, limit = 6) => {
+const listSessionsForUser = async (userId, page = 1, limit = 6, baseUrl) => {
+  if (!baseUrl) throw new Error("Base URL missing");
+
   const safePage = Math.max(Number(page) || 1, 1);
   const safeLimit = Math.max(Number(limit) || 6, 1);
   const skip = (safePage - 1) * safeLimit;
@@ -144,11 +144,11 @@ const listSessionsForUser = async (userId, page = 1, limit = 6) => {
         : session.selectedResumeName || "Deleted Resume",
 
       resumePreviewUrl: isValidResume
-        ? `${BASE_URL}/api/resume/view/${rawResumeId}`
+        ? `${baseUrl}/api/resume/view/${rawResumeId}`
         : null,
 
       resumeDownloadUrl: isValidResume
-        ? `${BASE_URL}/api/resume/download/${rawResumeId}`
+        ? `${baseUrl}/api/resume/download/${rawResumeId}`
         : null,
     };
   });
