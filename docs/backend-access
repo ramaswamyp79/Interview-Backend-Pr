@@ -1,0 +1,76 @@
+# Backend Access Runbook
+
+This runbook blocks direct public access to the Cloud Run `run.app` URL while keeping the Google Load Balancer URL available.
+
+## Current Values
+
+| Item | Value |
+| --- | --- |
+| Cloud Run service | `interview-backend` |
+| Cloud Run region | `asia-south1` |
+| Direct Cloud Run URL | `https://interview-backend-10476774711.asia-south1.run.app` |
+| Load Balancer API URL | `https://services.answerflow-ai.com` |
+
+## Before You Restrict Access
+
+Confirm the load balancer endpoint is healthy:
+
+```powershell
+curl.exe --ssl-no-revoke -i https://services.answerflow-ai.com/api/test
+```
+
+Expected result:
+
+```text
+HTTP/1.1 200 OK
+```
+
+Do not restrict Cloud Run ingress until this path works.
+
+## Block Direct Cloud Run Public Access
+
+Run:
+
+```powershell
+gcloud run services update interview-backend `
+  --region asia-south1 `
+  --ingress internal-and-cloud-load-balancing
+```
+
+This allows traffic from the Google Load Balancer and blocks direct public requests to:
+
+```text
+https://interview-backend-10476774711.asia-south1.run.app
+```
+
+## Validate After The Change
+
+Direct Cloud Run access should now fail:
+
+```powershell
+curl.exe --ssl-no-revoke -i https://interview-backend-10476774711.asia-south1.run.app/api/test
+```
+
+The load balancer path should still work:
+
+```powershell
+curl.exe --ssl-no-revoke -i https://services.answerflow-ai.com/api/test
+```
+
+## Rollback
+
+If the load balancer path fails after restricting ingress, temporarily restore direct public Cloud Run access:
+
+```powershell
+gcloud run services update interview-backend `
+  --region asia-south1 `
+  --ingress all
+```
+
+Then fix the load balancer, DNS, certificate, or serverless NEG configuration before restricting ingress again.
+
+## Important Note
+
+For this setup, keep unauthenticated invocation enabled if the public load balancer should reach the backend without identity-aware proxy or custom service-to-service auth.
+
+The ingress setting controls which network paths can reach Cloud Run. The IAM invoker setting controls who can invoke it. To block only the raw `run.app` URL, use ingress restriction first.
