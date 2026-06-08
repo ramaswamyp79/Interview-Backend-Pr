@@ -57,6 +57,48 @@ The load balancer path should still work:
 curl.exe --ssl-no-revoke -i https://services.answerflow-ai.com/api/test
 ```
 
+## If The Browser Shows A CORS Error
+
+After direct Cloud Run access is blocked, this browser error usually means the frontend is still calling the direct `run.app` URL:
+
+```text
+No 'Access-Control-Allow-Origin' header is present on the requested resource
+```
+
+Example failing request:
+
+```text
+https://interview-backend-10476774711.asia-south1.run.app/api/auth/social
+```
+
+This is expected after setting:
+
+```powershell
+--ingress internal-and-cloud-load-balancing
+```
+
+Cloud Run rejects the direct request before the Express app can add CORS headers, so the browser reports it as a CORS failure.
+
+Fix the frontend API base URL to use the load balancer host:
+
+```text
+https://services.answerflow-ai.com/api
+```
+
+Do not use:
+
+```text
+https://interview-backend-10476774711.asia-south1.run.app/api
+```
+
+For this backend, `CLIENT_ORIGIN` should stay as the frontend origin:
+
+```text
+https://app.answerflow-ai.com
+```
+
+`CLIENT_ORIGIN` is not the backend API URL.
+
 ## Rollback
 
 If the load balancer path fails after restricting ingress, temporarily restore direct public Cloud Run access:
