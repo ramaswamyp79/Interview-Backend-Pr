@@ -1,0 +1,137 @@
+# Google Managed SSL with Cloudflare and Google Load Balancer – Resolution Guide
+
+## Objective
+
+Configure a Google Managed SSL Certificate for services.answerflow-ai.com hosted behind a Google Cloud External Application Load Balancer while DNS is managed by Cloudflare.
+
+## Initial Problem
+
+The Google Managed SSL Certificate remained in:
+
+FAILED_NOT_VISIBLE
+
+even though the Load Balancer and HTTPS frontend were configured.
+
+DNS lookup initially returned Cloudflare proxy addresses:
+
+104.21.x.x
+172.67.x.x
+2606:4700:xxxx
+
+instead of the Google Load Balancer IP:
+
+8.232.140.211
+
+As a result, Google Certificate Manager could not verify domain ownership and failed certificate provisioning.
+
+## Root Cause
+
+The Cloudflare DNS record for services.answerflow-ai.com was configured as:
+
+Proxy Status = Proxied (Orange Cloud)
+
+When Cloudflare proxy is enabled, DNS queries return Cloudflare edge IP addresses rather than the actual Google Load Balancer IP. Google Managed Certificates require direct visibility of the Load Balancer endpoint during domain validation.
+
+## Resolution Steps
+
+### Step 1 – Verify Load Balancer IP
+
+Identify the public IP assigned to the Google Load Balancer.
+
+Example:
+
+8.232.140.211
+
+### Step 2 – Configure Cloudflare DNS
+
+Navigate to:
+
+Cloudflare → DNS → Records
+
+Create or update:
+
+Type: A
+Name: services
+Content: 8.232.140.211
+
+### Step 3 – Disable Proxy
+
+Change:
+
+Proxied (Orange Cloud)
+
+to:
+
+DNS Only (Gray Cloud)
+
+This allows public DNS resolvers to see the actual Google Load Balancer IP.
+
+### Step 4 – Validate DNS
+
+Execute:
+
+nslookup services.answerflow-ai.com 1.1.1.1
+
+Expected result:
+
+Name: services.answerflow-ai.com
+Address: 8.232.140.211
+
+This confirms that DNS propagation is correct and publicly visible.
+
+### Step 5 – Monitor Certificate Status
+
+Navigate to:
+
+Google Cloud Console
+→ Load Balancing
+→ SSL Certificates
+→ Certificate Details
+
+Possible states:
+
+PROVISIONING – Google is validating and issuing the certificate.
+
+ACTIVE – Certificate issued successfully.
+
+FAILED_NOT_VISIBLE – Domain could not be validated.
+
+### Step 6 – Wait for Revalidation
+
+After DNS correction, allow Google time to revalidate.
+
+Typical timings:
+
+15–60 minutes: Common
+1–4 hours: Acceptable
+Up to 24 hours: Possible
+
+## Validation Commands
+
+DNS Verification:
+
+nslookup services.answerflow-ai.com 1.1.1.1
+
+Google DNS Verification:
+
+nslookup services.answerflow-ai.com 8.8.8.8
+
+Quad9 Verification:
+
+nslookup services.answerflow-ai.com 9.9.9.9
+
+All should resolve to:
+
+8.232.140.211
+
+## Key Learning
+
+When using Google Managed SSL behind Cloudflare, domain validation requires the DNS record to be temporarily configured as DNS Only (Gray Cloud). Once the certificate becomes ACTIVE, Cloudflare Proxy (Orange Cloud) may be re-enabled if desired for CDN and DDoS protection.
+
+## Current Status
+
+Load Balancer: Configured
+DNS Resolution: Correct (8.232.140.211)
+Certificate: PROVISIONING
+Domain Validation Status: Previously FAILED_NOT_VISIBLE due to Cloudflare Proxy
+Expected Outcome: Certificate transitions to ACTIVE after Google revalidation.
